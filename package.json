@@ -1,0 +1,31 @@
+{
+  "name": "xo-server-ldap-plus",
+  "version": "0.0.1",
+  "license": "AGPL-3.0",
+  "description": "Advanced LDAP authentication plugin for XO-Server",
+  "keywords": [
+    "ldap",
+    "orchestra",
+    "plugin",
+    "xen",
+    "xen-orchestra",
+    "xo-server"
+  ],
+  "dependencies": {
+    "bluebird": "^3.4.7",
+    "event-to-promise": "^0.7.0",
+    "fs-promise": "^1.0.0",
+    "ldapjs": "^1.0.1"
+  },
+  "homepage": "https://github.com/BundesIT/xo-server-ldap-plus",
+  "bugs": "https://github.com/BundesIT/xo-server-ldap-plus/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BundesIT/xo-server-ldap-plus"
+  },
+  "author": {
+    "name": "Thomas Berger",
+    "email": "th.berger@it.piratenpartei.de"
+  },
+  "preferGlobal": false
+}
