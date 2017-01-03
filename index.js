@@ -80,6 +80,7 @@ For Microsoft Active Directory, you can try one of the following filters:
     required: ['uri', 'userBase', 'groupBase', 'groups']
 }
 
+/*
 exports.testSchema = {
     type: 'object',
     properties: {
@@ -94,6 +95,7 @@ exports.testSchema = {
     },
     required: ['username', 'password']
 }
+*/
 
 var bind = function bind(fn, thisArg) {
     return function () {
