@@ -127,8 +127,6 @@ function ldapPlus(xo) {
         })
     }
     this._auth = bind(this.authHandler, this)
-
-    this._xoGroups = {}
 }
 
 ldapPlus.prototype.configure = function (configuration) {
@@ -149,30 +147,33 @@ ldapPlus.prototype.configure = function (configuration) {
     this._ldapOpts.tlsOptions.rejectUnauthorized = configuration.checkCertificate
     if (configuration.certificateAuthorities) {
         _this = this;
-        Promise.all(
+        return Promise.all(
             configuration.certificateAuthorities.map(path => fsp.readFile(path))
         )
             .done(function (results) {
                 _this._ldapOpts.tlsOptions.ca = results
             })
     }
+}
 
+ldapPlus.prototype.getSyncedGroups = function () {
+    var groups = this._groups
+    xoGroups = {}
     return this._xo.getAllGroups()
         .then(function (result) {
             for (var i = 0, len = result.length; i < len; ++i) {
                 var xoGroupName = result[i].name
                 var xoGroupID = result[i].id
-                if (configuration.groups.find(function (g) {
+                if (groups.find(function (g) {
                     return g === xoGroupName
                 })) {
-                    _this._xoGroups[xoGroupName] = xoGroupID
+                    xoGroups[xoGroupName] = xoGroupID
                 }
             }
         })
         .then(function () {
-            console.log("configuration done")
+            return Promise.resolve(xoGroups)
         })
-    // we cache the LDAP <> XO Group Mapping
 }
 
 ldapPlus.prototype.authHandler = function (data) {
@@ -311,9 +312,9 @@ ldapPlus.prototype.authHandler = function (data) {
                         var checkUserGroupMembership = function (userID, groupID, isMember) {
                             return _this._xo.getGroup(groupID)
                                 .then(function (xoGroup) {
-                                    if (isMember && !xoGroup.users.find(function(u) { return u === userID })) {
+                                    if (isMember && !xoGroup.users.find(function (u) { return u === userID })) {
                                         return _this._xo.addUserToGroup(xoUser.id, xoGroup.id)
-                                    } else if (!isMember && xoGroup.users.find(function(u) { return u === userID })) {
+                                    } else if (!isMember && xoGroup.users.find(function (u) { return u === userID })) {
                                         return _this._xo.removeUserFromGroup(xoUser.id, xoGroup.id)
                                     } else {
                                         return Promise.resolve
@@ -321,37 +322,40 @@ ldapPlus.prototype.authHandler = function (data) {
                                 })
                         }
 
-                        return Promise.all(
-                            Object.keys(_this._xoGroups).map(function (g) {
-                                var isMember = false
-                                if (groupResults.find(function(r) { return r === g })) {
-                                    isMember = true
-                                }
-                                return checkUserGroupMembership(xoUser.id, _this._xoGroups[g], isMember)
-                            })
-                        )
-                            .then(function (results) {
-                                // TODO: check for errors from above
+                        return _this.getSyncedGroups()
+                            .then(function (xoGroups) {
+                                return Promise.all(
+                                    Object.keys(xoGroups).map(function (g) {
+                                        var isMember = false
+                                        if (groupResults.find(function (r) { return r === g })) {
+                                            isMember = true
+                                        }
+                                        return checkUserGroupMembership(xoUser.id, xoGroups[g], isMember)
+                                    })
+                                )
+                                    .then(function (results) {
+                                        // TODO: check for errors from above
 
-                                // now check if we have any new group, not created yet+
-                                return Promise.map(groupResults, function (g) {
-                                    if (_this._xoGroups[g] === undefined) {
-                                        return _this._xo.createGroup({ name: g })
-                                            .then(function (xoGroup) {
-                                                _this._xoGroups[g] = xoGroup.id
-                                                return _this._xo.addUserToGroup(xoUser.id, xoGroup.id)
+                                        // now check if we have any new group, not created yet+
+                                        return Promise.map(groupResults, function (g) {
+                                            if (xoGroups[g] === undefined) {
+                                                return _this._xo.createGroup({ name: g })
+                                                    .then(function (xoGroup) {
+                                                        xoGroups[g] = xoGroup.id
+                                                        return _this._xo.addUserToGroup(xoUser.id, xoGroup.id)
+                                                    })
+                                            } else {
+                                                return Promise.resolve()
+                                            }
+                                        })
+                                            .then(function () {
+                                                return Promise.resolve(xoUser)
                                             })
-                                    } else {
-                                        return Promise.resolve()
-                                    }
-                                })
-                                    .then(function () {
-                                        return Promise.resolve(xoUser)
                                     })
                             })
                     })
             })
-            .then(function(xoUser) {
+            .then(function (xoUser) {
                 return Promise.resolve(xoUser.id)
             })
             .catch(function (err) {
