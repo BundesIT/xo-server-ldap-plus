@@ -9,7 +9,7 @@ same identifier. It upadtes the group memberships from LDAP to XO on every login
 
 ## Install
 
-Installation of the [npm package]
+Installation of the [npm package](https://www.npmjs.com/package/xo-server-ldap-plus)
 
 ```
 > npm install --global xo-server-ldap-plus
